@@ -1,0 +1,155 @@
+---
+title: "Data Analysis on Storm and severe weather Data"
+author: "Martin Okwumuo"
+date: "2025-12-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Summary of Analysis
+This analysis used the U.S. National Oceanic and Atmospheric Administration (NOAA) Storm Database to examine the effects of severe weather events on population health and the economy.The impact on the Population health was measured as the combined total of injuries and fatalities across all recorded storm events. The analysis shows that Tornadoes are the most harmful event type to population health, causing the highest number of injuries and fatalities. A histogram and line plot of the EVTYPE variable reveal that storm events are unevenly distributed, with a small number of event types occurring very frequently. Economic consequences were measured using the combined property and crop damage values. Flood were found to have the greatest economic impact, resulting in the highest total economic losses among all event types. At the county level, Cook County suffered the highest combined number of injuries and fatalities, indicating significant vulnerability to severe weather events.
+
+#Data preprocessing
+
+## Downloading the dataset
+
+### Creating the directory
+```{r download-data, cache=TRUE}
+# Create directory if it does not exist
+if (!dir.exists("rpubassigndata")) {
+  dir.create("rpubassigndata")
+}
+```
+
+# Define URL and destination file
+```{r, cache=TRUE}
+url <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+destfile <- "rpubassigndata/StormData.csv.bz2"
+```
+
+# Downloading  the data if it is not already present
+```{r, cache=TRUE}
+if (!file.exists(destfile)) {
+  download.file(url, destfile, mode = "wb")
+}
+```
+
+# Loading the Data
+```{r, cache=TRUE}
+stormdata <- read.csv("rpubassigndata/StormData.csv.bz2")
+```
+
+
+## Inspecting the data
+```{r, cache=TRUE}
+head(stormdata)
+```
+
+```{r, cache=TRUE}
+str(stormdata)
+```
+
+# Summary of data
+```{r, cache=TRUE}
+summary(stormdata)
+```
+
+# Number of rows
+```{r, cache=TRUE}
+nrow(stormdata)
+```
+
+# Checking for missing data
+```{r, cache=TRUE}
+sum(!complete.cases(stormdata))
+```
+
+```{r, cache=TRUE}
+sum(is.na(stormdata))
+```
+```{r, cache=TRUE}
+any(duplicated(stormdata))
+```
+
+#Result
+
+##Analysis
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+# Count frequency of each EVTYPE
+```{r, cache=TRUE}
+evtype_freq <- stormdata %>%
+  count(EVTYPE, sort = TRUE)
+```
+
+# Bar plot (top 10 most frequent event types for clarity)
+```{r, cache=TRUE}
+ggplot(evtype_freq[1:10, ],
+       aes(x = reorder(EVTYPE, n), y = n)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Most Frequent Storm Event Types",
+    x = "Event Type",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+# Keep only relevant variables
+```{r, cache=TRUE}
+storm <- stormdata[, c("EVTYPE", "FATALITIES", "INJURIES",
+                       "PROPDMG", "CROPDMG", "COUNTYNAME")]
+
+# Total health impact
+storm$HEALTH_IMPACT <- storm$FATALITIES + storm$INJURIES
+
+# Total economic impact
+storm$ECONOMIC_DAMAGE <- storm$PROPDMG + storm$CROPDMG
+```
+
+## The Summary of harm to population health by EVTYPE
+```{r health-summary, cache=TRUE}
+health_by_event <- aggregate(HEALTH_IMPACT ~ EVTYPE, data = storm, sum)
+health_by_event <- health_by_event[order(-health_by_event$HEALTH_IMPACT), ]
+
+head(health_by_event, 10)
+```
+
+#Result
+## The Histogram of EVTYPE (frequency)
+```{r histogram, cache=TRUE}
+hist(as.numeric(factor(storm$EVTYPE)),
+     breaks = 50,
+     main = "Histogram of Storm Event Types (EVTYPE)",
+     xlab = "Event Type Index",
+     col = "lightblue")
+```
+
+## Event type with greatest economic impact
+```{r economic-summary, cache=TRUE}
+economic_by_event <- aggregate(ECONOMIC_DAMAGE ~ EVTYPE, data = storm, sum)
+economic_by_event <- economic_by_event[order(-economic_by_event$ECONOMIC_DAMAGE), ]
+
+head(economic_by_event, 10)
+```
+
+## County with the most injuries and fatalities
+```{r county-summary, cache=TRUE}
+county_impact <- aggregate(HEALTH_IMPACT ~ COUNTYNAME, data = storm, sum)
+county_impact <- county_impact[order(-county_impact$HEALTH_IMPACT), ]
+
+head(county_impact, 10)
+```
+
+# Conclusion
+- The Most harmful Weather Events based on the analysis of EVTYPE data to population health is Tornado.
+- And the event with the greatest economic impact is Flood. 
+- Cook County suffered the most injuries and fatalities.
